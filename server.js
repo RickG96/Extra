@@ -71,13 +71,14 @@ app.post('/setestados', (req, res) => {
 
             datosCarro.peso = datos[2];
             datosCarro.position = datos[0];
-            datosCarro.estado = mCarrito;
-            datosCarro.obstaculos = datos[3];
 
             db.get('peso')
               .push({ peso: parseInt(datos[2]) })
               .write();
         }
+
+        datosCarro.estado = mCarrito;
+        datosCarro.obstaculos = datos[3];
     } else if(datos[0] == 2) {
         if(actual != datos[0]) {
             nllegadas++;
@@ -160,6 +161,14 @@ app.get('/getestados', (req, res) => {
     
     res.json(datosCarro);
 });
+
+app.get('/getestadoactivo', (req, res) => {
+    if(mCarrito == "") {
+        res.send("s");
+    } else {
+        res.send("n");
+    }
+})
 
 app.get('/promedio', (req, res) => {
     promedioPeso = 0;
