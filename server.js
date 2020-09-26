@@ -62,94 +62,79 @@ var mCarrito = "1";
 app.post('/setestados', (req, res) => {
     //console.log(new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''));
     console.log(req.body.valores);
+    if(req.body.valores == null) {
+        console.log("Es nulo");
+        res.json("null");
+    } else {
+        let datos = req.body.valores.split('-');
 
-    let datos = req.body.valores.split('-');
+        if(datos[0] == 0) {
+            if(actual != datos[0]) {
+                nsalidas++;
+                actual = parseInt(datos[0]);
 
-    if(datos[0] == 0) {
-        if(actual != datos[0]) {
-            nsalidas++;
-            actual = parseInt(datos[0]);
+                datosCarro.h_salida = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+                datosCarro.position = datos[0];
+                datosCarro.estado = mCarrito;
+                datosCarro.peso = 0;
+                
+                db.get('hora_salida')
+                .push({ id: nsalidas, hora: new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''), milis: new Date().getTime() })
+                .write();
 
-            datosCarro.h_salida = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
-            datosCarro.position = datos[0];
-            datosCarro.estado = mCarrito;
-            datosCarro.peso = 0;
-            
-            db.get('hora_salida')
-              .push({ id: nsalidas, hora: new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''), milis: new Date().getTime() })
-              .write();
+                if(db.get('hora_llegada').size().value() > 0) {
 
-            if(db.get('hora_llegada').size().value() > 0) {
+                    db.get('t_regreso')
+                    .push({ tiempo: (db.get('hora_salida').find({ id: nsalidas }).value().milis - db.get('hora_llegada').find({ id: nllegadas }).value().milis) / 1000 })
+                    .write();
+                    datosCarro.obstaculos = datos[3];
+                } 
 
-                db.get('t_regreso')
-                  .push({ tiempo: (db.get('hora_salida').find({ id: nsalidas }).value().milis - db.get('hora_llegada').find({ id: nllegadas }).value().milis) / 1000 })
-                  .write();
-                  datosCarro.obstaculos = datos[3];
-            } 
+            }
+        } else if(datos[0] == 1) {
+            if(actual != datos[0] && parseInt(datos[2]) > 0) {
+                actual = parseInt(datos[0]);
 
-            var message = {
-                notification: {
-                    title: 'Esperando',
-                    body: 'El carrito se encuentra esperando un paquete'
-                },
-                android: {
-                    notification: {
-                      icon: 'stock_ticker_update',
-                      color: '#7e55c3'
-                    }
-                },
-                token: tokenFB
-            };
-            admin.messaging().send(message)
-                .then((res) => {
-                    console.log('Notificación de buzon enviada con exito!');
-                })
-                .catch((err) => {
-                    console.log(err);
-                })
-        }
-    } else if(datos[0] == 1) {
-        if(actual != datos[0] && parseInt(datos[2]) > 0) {
-            actual = parseInt(datos[0]);
+                datosCarro.peso = datos[2];
+                datosCarro.position = datos[0];
 
-            datosCarro.peso = datos[2];
-            datosCarro.position = datos[0];
+                db.get('peso')
+                .push({ peso: parseInt(datos[2]) })
+                .write();
+            }
 
-            db.get('peso')
-              .push({ peso: parseInt(datos[2]) })
-              .write();
-        }
-
-        datosCarro.estado = mCarrito;
-        datosCarro.obstaculos = datos[3];
-    } else if(datos[0] == 2) {
-        if(actual != datos[0]) {
-            nllegadas++;
-
-            actual = parseInt(datos[0]);
-            
-            datosCarro.h_llegada = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
-            datosCarro.position = datos[0];
             datosCarro.estado = mCarrito;
             datosCarro.obstaculos = datos[3];
+        } else if(datos[0] == 2) {
+            if(actual != datos[0]) {
+                nllegadas++;
 
-            db.get('hora_llegada')
-              .push({ id: nllegadas, hora: new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''), milis: new Date().getTime() })
-              .write();
+                actual = parseInt(datos[0]);
+                
+                datosCarro.h_llegada = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '');
+                datosCarro.position = datos[0];
+                datosCarro.estado = mCarrito;
+                datosCarro.obstaculos = datos[3];
 
-            db.get('t_entrega')
-              .push({ tiempo: (db.get('hora_llegada').find({ id: nsalidas }).value().milis - db.get('hora_salida').find({ id: nsalidas }).value().milis) / 1000 })
-              .write();
+                db.get('hora_llegada')
+                .push({ id: nllegadas, hora: new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''), milis: new Date().getTime() })
+                .write();
 
-            totaPaquetes++;
-            datosCarro.total_paquetes = totaPaquetes;
+                db.get('t_entrega')
+                .push({ tiempo: (db.get('hora_llegada').find({ id: nsalidas }).value().milis - db.get('hora_salida').find({ id: nsalidas }).value().milis) / 1000 })
+                .write();
+
+                totaPaquetes++;
+                datosCarro.total_paquetes = totaPaquetes;
+            }
         }
+        
+        db.update('obstaculos', n => datos[3]) 
+        .write();
+
+        res.json('ok');
     }
     
-    db.update('obstaculos', n => datos[3]) 
-      .write();
-
-    res.json('ok');
 })
 
 app.post('/movercarro', (req, res) => {
@@ -224,6 +209,28 @@ app.get('/promedio', (req, res) => {
     res.json(promedioPeso);
 });
 
+function hola () {
+    var message = {
+        notification: {
+            title: 'Esperando',
+            body: 'El carrito se encuentra esperando un paquete'
+        },
+        android: {
+            notification: {
+            icon: 'stock_ticker_update',
+            color: '#7e55c3'
+            }
+        },
+        token: tokenFB
+    };
+    admin.messaging().send(message)
+        .then((res) => {
+            console.log('Notificación de buzon enviada con exito!');
+        })
+        .catch((err) => {
+            console.log(err);
+        })
+}
 
 app.listen(3000, (err) => {
     if (err) console.log('Ocurrio un error'), process.exit(1);
