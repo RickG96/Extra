@@ -28,7 +28,7 @@ admin.initializeApp({
 const dba = admin.firestore();
 const messaging = admin.messaging();
 
-db.defaults({ peso: [], hora_salida: [], hora_llegada: [], t_entrega: [], t_regreso: [], obstaculos: 0 })
+db.defaults({ entregas: [] })
     .write();
 
 var app = express();
@@ -208,6 +208,55 @@ app.get('/promedio', (req, res) => {
     console.log(promedioPeso);
     res.json(promedioPeso);
 });
+
+app.get('/getdb', (req, res) => {
+    res.json(db.get('entregas').values());
+});
+
+
+let entregaPorMes = [];
+app.get('/getbymonth/:id?', (req, res) => {
+    try {
+        if(req.params.id) {
+            entregaPorMes = [];
+            let fecha = null;
+            db.get('entregas').value().forEach(element => {
+                fecha = new Date(element.fPartida).getMonth();
+                if(fecha == req.params.id - 1) entregaPorMes.push(element);
+            });
+            res.json(entregaPorMes.sort((a,b) => {return new Date(b.fPartida) - new Date(a.fPartida)}));
+        } else {
+            res.json(db.get('entregas').values());
+        }
+    } catch(err){
+        res.json("error");
+    }
+});
+
+let entregaPorDia = []
+app.get('/getbydaymonth/:id?', (req, res) => {
+    try {
+        if(req.params.id) {
+            entregaPorDia = [];
+            let mes = null;
+            let dia = null;
+            db.get('entregas').value().forEach(element => {
+                mes = new Date(element.fPartida).getMonth();
+                dia = new Date(element.fPartida).getDate();
+                if(mes == parseInt(req.params.id.split("-")[1]) - 1 && dia == parseInt(req.params.id.split("-")[0])) entregaPorDia.push(element);
+            });
+            res.json(entregaPorDia.sort((a,b) => {return new Date(b.fPartida) - new Date(a.fPartida)}));
+        } else {
+            res.json(db.get('entregas').values());
+        }
+    } catch(err) {
+        res.json("error");
+    }
+})
+
+app.get('/getbymonth/:id', (req, res, next) => {
+    res.end(req.params.id);
+})
 
 function hola () {
     var message = {
