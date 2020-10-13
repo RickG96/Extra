@@ -252,10 +252,41 @@ app.get('/getbydaymonth/:id?', (req, res) => {
     } catch(err) {
         res.json("error");
     }
-})
+});
 
-app.get('/getbymonth/:id', (req, res, next) => {
-    res.end(req.params.id);
+
+app.get('/entregasmes/:id?', (req, res) => {
+    try {
+        if(req.params.id) {
+            entregaPorMes = [];
+            let fecha = null;
+            db.get('entregas').value().forEach(element => {
+                fecha = new Date(element.fPartida).getMonth();
+                if(fecha == req.params.id - 1) entregaPorMes.push(element);
+            });
+            let porDia = [];
+            let otro = [];
+            porDia = entregaPorMes.sort((a,b) => {return new Date(b.fPartida) - new Date(a.fPartida)}).reduce((r, a) => {
+                r[a.fPartida.split(" ")[0]] = [...r[a.fPartida.split(" ")[0]] || [], a];
+                return r;
+            }, {});
+            otro = Object.keys(porDia);
+            let ultimo = [];
+            otro.forEach(element => {
+                let horasi ={
+                    dia: element,
+                    entregas: porDia[element].length
+                }
+                ultimo.push(horasi);
+            })
+            res.json(ultimo);
+            //res.json(porDia);
+        } else {
+            res.json(db.get('entregas').values());
+        }
+    } catch(err){
+        res.json("error");
+    } 
 })
 
 function hola () {
