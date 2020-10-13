@@ -289,6 +289,47 @@ app.get('/entregasmes/:id?', (req, res) => {
     } 
 })
 
+app.get('/promediomes/:id?', (req, res) => {
+    try {
+        if(req.params.id) {
+            entregaPorMes = [];
+            let fecha = null;
+            db.get('entregas').value().forEach(element => {
+                fecha = new Date(element.fPartida).getMonth();
+                if(fecha == req.params.id - 1) entregaPorMes.push(element);
+            });
+            let porDia = [];
+            let otro = [];
+            porDia = entregaPorMes.sort((a,b) => {return new Date(b.fPartida) - new Date(a.fPartida)}).reduce((r, a) => {
+                r[a.fPartida.split(" ")[0]] = [...r[a.fPartida.split(" ")[0]] || [], a];
+                return r;
+            }, {});
+            otro = Object.keys(porDia);
+            let ultimo = [];
+            otro.forEach(element => {
+                let promedioIda = 0;
+                let promedioVuelta = 0; 
+                porDia[element].forEach(el => {
+                    promedioIda = promedioIda + el.tiempo_ida;
+                    promedioVuelta = promedioVuelta + el.tiempo_regreso;
+                })
+                let horasi ={
+                    dia: element,
+                    prom_ida: promedioIda / porDia[element].length,
+                    prom_regreso: promedioVuelta / porDia[element].length
+                }
+                ultimo.push(horasi);
+            })
+            res.json(ultimo);
+            //res.json(porDia);
+        } else {
+            res.json(db.get('entregas').values());
+        }
+    } catch(err){
+        res.json("error");
+    } 
+})
+
 function hola () {
     var message = {
         notification: {
